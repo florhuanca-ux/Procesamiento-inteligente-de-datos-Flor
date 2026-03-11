@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Reconocimiento de Números</title>
+    <script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
+    <style>
+        body { font-family: Arial; text-align: center; margin-top: 40px; background: #f0f0f0; }
+        canvas { border: 3px solid #333; cursor: crosshair; background: black; }
+        button { margin: 10px; padding: 10px 20px; font-size: 16px; cursor: pointer; }
+        #resultado { font-size: 80px; font-weight: bold; margin-top: 20px; color: #333; }
+        #label-resultado { font-size: 20px; color: #666; }
+    </style>
+</head>
+<body>
+    <h1>Dibuja un número (0-9)</h1>
+    <canvas id="canvas" width="280" height="280"></canvas>
+    <br>
+    <button onclick="limpiar()">Limpiar</button>
+    <p id="label-resultado">Resultado:</p>
+    <div id="resultado">?</div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        let drawing = false;
+
+        ctx.fillStyle = 'black';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.strokeStyle = 'white';
+        ctx.lineWidth = 18;
+        ctx.lineCap = 'round';
+
+        canvas.addEventListener('mousedown', (e) => {
+            drawing = true;
+            ctx.beginPath();
+            ctx.moveTo(e.offsetX, e.offsetY);
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (!drawing) return;
+            ctx.lineTo(e.offsetX, e.offsetY);
+            ctx.stroke();
+        });
+
+        canvas.addEventListener('mouseup', () => {
+            drawing = false;
+            enviarPixeles();
+        });
+
+        canvas.addEventListener('mouseleave', () => {
+            if (drawing) {
+                drawing = false;
+                enviarPixeles();
+            }
+        });
+
+        function enviarPixeles() {
+            // Escalar el canvas de 280x280 a 28x28
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = 28;
+            tempCanvas.height = 28;
+            const tempCtx = tempCanvas.getContext('2d');
+            tempCtx.drawImage(canvas, 0, 0, 28, 28);
+
+            var pixels = [];
+            for (var x = 0; x < 28; x++) {
+                for (var y = 0; y < 28; y++) {
+                    var imgData = tempCtx.getImageData(y, x, 1, 1);
+                    var data = imgData.data;
+                    var color = (data[0]) / 255;
+                    color = (Math.round(color * 100) / 100).toFixed(2);
+                    pixels.push(color);
+                }
+            }
+
+            $.post("http://localhost:8000", { pixeles: pixels.join(",") },
+                function (response) {
+                    console.log("Resultado: " + response);
+                    const nombres = ['Cero','Uno','Dos','Tres','Cuatro','Cinco','Seis','Siete','Ocho','Nueve'];
+                    $("#resultado").html(response + " (" + nombres[response] + ")");
+                }
+            );
+        }
+
+        function limpiar() {
+            ctx.fillStyle = 'black';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            $("#resultado").html("?");
+        }
+    </script>
+</body>
+</html>
